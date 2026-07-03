@@ -88,7 +88,7 @@ export default function Login() {
             <span className="material-symbols-outlined text-primary-container text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>speed</span>
           </div>
           <h1 className="font-display-lg text-display-lg text-primary tracking-tighter text-center">IGNITION</h1>
-          <p className="font-body-sm text-on-surface-variant opacity-60 mt-1 uppercase tracking-[0.2em]">Automotive Performance</p>
+          <p className="font-body-sm text-on-surface-variant opacity-60 mt-1 uppercase tracking-[0.2em]">YOUR AUTOMOTIVE PERFORMANCE</p>
         </header>
 
         {/* Glassmorphic Login Card */}
