@@ -30,11 +30,28 @@ export default function AccountInfo() {
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     try {
-      await fetchApi('/users/me', { method: 'DELETE' });
-      await authClient.signOut();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      
+      const res = await fetch('/api/users/me', {
+        method: 'DELETE',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      clearTimeout(timeout);
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Gagal menghapus akun');
+      
       window.location.href = '/';
     } catch (err) {
-      console.error("Failed to delete account:", err);
+      console.error(err);
+      if (err.name === 'AbortError') {
+        alert('Penghapusan terlalu lama. Coba lagi nanti.');
+      } else {
+        alert('Gagal: ' + err.message);
+      }
       setIsDeleting(false);
       setShowDeletePopup(false);
     }

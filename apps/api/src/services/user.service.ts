@@ -1,6 +1,6 @@
 import { db } from '../config/db';
 import { users, sessions, accounts, vehicles, serviceRecords, serviceItems } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 export const getUserById = async (id: string) => {
   const result = await db.select().from(users).where(eq(users.id, id));
@@ -16,18 +16,17 @@ export const updateUserProfile = async (id: string, data: { name?: string; phone
 };
 
 export const deleteUserAccount = async (userId: string) => {
-  return await db.transaction(async (tx) => {
-    const userVehicles = await tx.select().from(vehicles).where(eq(vehicles.userId, userId));
-    for (const v of userVehicles) {
-      const records = await tx.select().from(serviceRecords).where(eq(serviceRecords.vehicleId, v.id));
-      for (const r of records) {
-        await tx.delete(serviceItems).where(eq(serviceItems.serviceRecordId, r.id));
-      }
-      await tx.delete(serviceRecords).where(eq(serviceRecords.vehicleId, v.id));
-      await tx.delete(vehicles).where(eq(vehicles.id, v.id));
-    }
-    await tx.delete(sessions).where(eq(sessions.userId, userId));
-    await tx.delete(accounts).where(eq(accounts.userId, userId));
-    await tx.delete(users).where(eq(users.id, userId));
-  });
+  // Batch-optimized: use inArray for fewer queries
+  const userVehicles = await db.select({ id: vehicles.id }).from(vehicles).where(eq(vehicles.userId, userId));
+  const vids = userVehicles.map((v) => v.id);
+  if (vids.length > 0) {
+    const records = await db.select({ id: serviceRecords.id }).from(serviceRecords).where(inArray(serviceRecords.vehicleId, vids));
+    const rids = records.map((r) => r.id);
+    if (rids.length > 0) await db.delete(serviceItems).where(inArray(serviceItems.serviceRecordId, rids));
+    await db.delete(serviceRecords).where(inArray(serviceRecords.vehicleId, vids));
+    await db.delete(vehicles).where(inArray(vehicles.id, vids));
+  }
+  await db.delete(sessions).where(eq(sessions.userId, userId));
+  await db.delete(accounts).where(eq(accounts.userId, userId));
+  await db.delete(users).where(eq(users.id, userId));
 };
