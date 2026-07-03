@@ -1,16 +1,28 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchApi } from '../lib/api';
 
 export default function AddVehicle() {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     brand: '',
     currentOdometer: '',
     tankCapacity: ''
   });
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedImage(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     if (!formData.name || !formData.brand || !formData.currentOdometer) {
@@ -20,6 +32,23 @@ export default function AddVehicle() {
     
     setIsProcessing(true);
     try {
+      let imageUrl = null;
+      
+      // Upload image to Cloudinary if selected
+      if (selectedImage) {
+        const reader = new FileReader();
+        const base64 = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(selectedImage);
+        });
+        
+        const uploadRes = await fetchApi('/upload', {
+          method: 'POST',
+          body: JSON.stringify({ file: base64 }),
+        });
+        imageUrl = uploadRes.data?.url;
+      }
+
       const response = await fetchApi('/vehicles', {
         method: 'POST',
         body: JSON.stringify({
@@ -27,6 +56,7 @@ export default function AddVehicle() {
           brand: formData.brand,
           currentOdometer: parseInt(formData.currentOdometer),
           tankCapacity: formData.tankCapacity ? parseFloat(formData.tankCapacity) : 0,
+          imageUrl,
         })
       });
       
@@ -65,22 +95,41 @@ export default function AddVehicle() {
       <main className="pt-24 pb-32 px-container-padding-mobile max-w-md mx-auto relative z-10">
         {/* Hero Section: Image Upload */}
         <section className="mb-stack-lg">
-          <div className="relative group">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageSelect}
+          />
+          <div className="relative group" onClick={() => fileInputRef.current?.click()}>
             <div className="w-full aspect-video rounded-xl overflow-hidden glass-card flex flex-col items-center justify-center cursor-pointer active:scale-[0.98] transition-all relative border-dashed border-2 border-white/20">
-              {/* Dynamic Background */}
-              <div className="relative z-10 flex flex-col items-center gap-stack-md">
-                <div className="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center text-primary-container border border-primary-container/20">
-                  <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'wght' 200" }}>add_a_photo</span>
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="relative z-10 flex flex-col items-center gap-stack-md">
+                  <div className="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center text-primary-container border border-primary-container/20">
+                    <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'wght' 200" }}>add_a_photo</span>
+                  </div>
+                  <p className="font-title-md text-on-surface text-center">Unggah Foto Motor</p>
+                  <p className="font-body-sm text-on-surface-variant/60 text-center px-8">Ambil gambar terbaik dari sisi samping motor Anda</p>
                 </div>
-                <p className="font-title-md text-on-surface text-center">Unggah Foto Motor</p>
-                <p className="font-body-sm text-on-surface-variant/60 text-center px-8">Ambil gambar terbaik dari sisi samping motor Anda</p>
-              </div>
+              )}
               {/* Decorative HUD elements */}
-              <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-primary/40"></div>
-              <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-primary/40"></div>
-              <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-primary/40"></div>
-              <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-primary/40"></div>
+              <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-primary/40 z-10"></div>
+              <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-primary/40 z-10"></div>
+              <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-primary/40 z-10"></div>
+              <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-primary/40 z-10"></div>
             </div>
+            {imagePreview && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setSelectedImage(null); setImagePreview(null); }}
+                className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center z-20 hover:bg-red-600 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            )}
           </div>
         </section>
 
