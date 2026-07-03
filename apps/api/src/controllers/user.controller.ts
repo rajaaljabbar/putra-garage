@@ -1,5 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import * as userService from '../services/user.service';
+
+const updateMeSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  phoneNumber: z.string().max(20).regex(/^[0-9+\-\s()]*$/, 'Invalid phone number').optional().nullable(),
+  image: z.string().max(2000).optional().nullable(),
+});
 
 export const getMe = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -17,9 +24,12 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
 export const updateMe = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user.id;
-    const { name, phoneNumber, image } = req.body;
+    const parsed = updateMeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, message: 'Invalid data', errors: parsed.error.flatten() });
+    }
     
-    const updatedUser = await userService.updateUserProfile(userId, { name, phoneNumber, image });
+    const updatedUser = await userService.updateUserProfile(userId, parsed.data);
     res.json({ success: true, data: updatedUser });
   } catch (error) {
     next(error);

@@ -1,6 +1,6 @@
 import { db } from '../config/db';
 import { serviceRecords, serviceItems, vehicles } from '../db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 
 export const getServicesByVehicleId = async (vehicleId: string) => {
   const records = await db.select().from(serviceRecords)
@@ -8,6 +8,22 @@ export const getServicesByVehicleId = async (vehicleId: string) => {
     .orderBy(desc(serviceRecords.serviceDate));
     
   return records;
+};
+
+export const getServiceItemsWithOwnership = async (recordId: string, userId: string) => {
+  // Join service_records -> vehicles to verify ownership
+  const result = await db
+    .select({ items: serviceItems })
+    .from(serviceItems)
+    .innerJoin(serviceRecords, eq(serviceItems.serviceRecordId, serviceRecords.id))
+    .innerJoin(vehicles, eq(serviceRecords.vehicleId, vehicles.id))
+    .where(and(
+      eq(serviceItems.serviceRecordId, recordId),
+      eq(vehicles.userId, userId)
+    ));
+  
+  if (result.length === 0) return null;
+  return result.map(r => r.items);
 };
 
 export const createServiceRecord = async (vehicleId: string, data: any, items: any[]) => {

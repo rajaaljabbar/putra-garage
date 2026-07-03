@@ -42,9 +42,12 @@ export const addService = async (req: Request, res: Response, next: NextFunction
 export const getServiceDetails = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    // In a real app we would check if the service record belongs to a vehicle owned by the user
-    // For simplicity, we just fetch items
-    const items = await svcService.getServiceItems(id);
+    const userId = req.user.id;
+    // Verify service record belongs to a vehicle owned by this user
+    const items = await svcService.getServiceItemsWithOwnership(id, userId);
+    if (!items) {
+      return res.status(404).json({ success: false, message: 'Service record not found' });
+    }
     res.json({ success: true, data: items });
   } catch (error) {
     next(error);

@@ -6,14 +6,19 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  console.error(err.stack);
+  // Always log full error server-side, never expose stack to client in production
+  console.error(`[${new Date().toISOString()}] ${req.method} ${req.path}:`, err.message);
+  if (process.env.NODE_ENV !== 'production') {
+    console.error(err.stack);
+  }
 
   const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
+  const message = statusCode === 500 ? 'Internal Server Error' : err.message;
 
   res.status(statusCode).json({
     success: false,
     message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    // Only include details in non-production environments
+    ...(process.env.NODE_ENV !== 'production' && { detail: err.message, stack: err.stack }),
   });
 };
