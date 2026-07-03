@@ -8,6 +8,8 @@ export default function AccountInfo() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [userProfile, setUserProfile] = useState(null);
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -24,6 +26,19 @@ export default function AccountInfo() {
   }, []);
 
   const displayUser = userProfile || user;
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await fetchApi('/users/me', { method: 'DELETE' });
+      await authClient.signOut();
+      window.location.href = '/';
+    } catch (err) {
+      console.error("Failed to delete account:", err);
+      setIsDeleting(false);
+      setShowDeletePopup(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col font-body-lg bg-[#0A0A0B] text-[#e5e2e3] antialiased">
@@ -136,6 +151,18 @@ export default function AccountInfo() {
             Logout
           </button>
         </section>
+
+        {/* Delete Account Section */}
+        <section className="mt-4 mb-8">
+          <button 
+            onClick={() => setShowDeletePopup(true)}
+            className="w-full flex items-center justify-center p-4 rounded-xl border border-red-700/40 text-red-400 hover:bg-red-950/30 active:scale-95 transition-all"
+          >
+            <span className="material-symbols-outlined mr-2">delete_forever</span>
+            Hapus Akun
+          </button>
+          <p className="text-on-surface-variant/40 text-xs text-center mt-2">Semua data kendaraan & riwayat service akan dihapus permanen</p>
+        </section>
       </main>
 
       {/* BottomNavBar */}
@@ -155,6 +182,46 @@ export default function AccountInfo() {
           <span className="font-label-caps text-label-caps">Profil</span>
         </button>
       </nav>
+
+      {/* Delete Account Confirmation Popup */}
+      {showDeletePopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
+          <div className="glass-card rounded-2xl p-6 w-full max-w-sm animate-in fade-in zoom-in duration-200">
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-red-400 text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              </div>
+              <h3 className="font-title-md text-title-md text-on-surface mb-2">Hapus Akun?</h3>
+              <p className="font-body-sm text-on-surface-variant">
+                Semua data Anda — kendaraan, riwayat service, dan akun — akan dihapus <span className="text-red-400 font-semibold">secara permanen</span> dan tidak dapat dikembalikan.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeletePopup(false)}
+                disabled={isDeleting}
+                className="flex-1 py-3 rounded-xl border border-white/10 text-on-surface-variant font-body-lg hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="flex-1 py-3 rounded-xl bg-red-600 text-white font-body-lg hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>Menghapus...</>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-xl">delete_forever</span>
+                    Hapus
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

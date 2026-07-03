@@ -25,3 +25,13 @@ export const updateMe = async (req: Request, res: Response, next: NextFunction) 
     next(error);
   }
 };
+
+export const deleteMe = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user.id;
+    await userService.deleteUserAccount(userId);
+    res.json({ success: true, message: 'Account and all data deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
