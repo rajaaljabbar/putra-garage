@@ -28,6 +28,7 @@ npm-debug.log*
 
 # Vercel
 .vercel
+api/index.js
 
 # Drizzle
 drizzle/meta/

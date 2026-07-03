@@ -1,6 +1,5 @@
-// Local dev entry — import from shared api/ source
-import app from "../../../api/app";
-import { env } from "../../../api/config/env";
+import app from "./app";
+import { env } from "./config/env";
 
 const PORT = env.PORT || 5000;
 
