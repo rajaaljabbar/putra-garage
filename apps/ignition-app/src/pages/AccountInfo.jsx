@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { authClient } from '../lib/authClient';
 import { fetchApi } from '../lib/api';
+import PhotoCrop from '../components/PhotoCrop';
 
 export default function AccountInfo() {
   const navigate = useNavigate();
@@ -26,6 +27,19 @@ export default function AccountInfo() {
   }, []);
 
   const displayUser = userProfile || user;
+
+  const handlePhotoCrop = async (base64) => {
+    try {
+      const uploadRes = await fetchApi('/upload', { method: 'POST', body: JSON.stringify({ file: base64 }) });
+      const imageUrl = uploadRes.data?.url;
+      if (imageUrl) {
+        await fetchApi('/users/me', { method: 'PUT', body: JSON.stringify({ image: imageUrl }) });
+        setUserProfile((prev) => ({ ...prev, image: imageUrl }));
+      }
+    } catch (err) {
+      console.error('Upload foto profil gagal', err);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -71,7 +85,7 @@ export default function AccountInfo() {
           <h1 className="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary tracking-tighter italic">IGNITION</h1>
         </div>
         <div className="w-10 h-10 rounded-full overflow-hidden border border-primary/30">
-          <img alt="User Profile" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDq20CR2v7QHLZctYSDOh4-G48fKJbXHrws1jW8jHjhZxdUvOlh1zFWWvvkToxrDsiDF316gHzfW0p5ZSQu7fVRjVmFU8DZpmSFMEf4sJW0ywHwKK262_qj41Ahr83lqkyYgHyMS5zJah2x7enEfGyNHlq_ZHtNTgxUfBUORtDBCYxcUhmBNwKPis4LMrPFNGRVSx8sydSkgGuxQQV-lkzEKU6LA0w5hlD_WhTSuWvMNIxXw2ELpUdrKXWmTqflJ_r785DArNVukjk" />
+          <img alt="User Profile" className="w-full h-full object-cover" src={displayUser?.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayUser?.name || 'User') + '&background=FF6B00&color=fff&size=200'} />
         </div>
       </header>
 
@@ -79,18 +93,23 @@ export default function AccountInfo() {
       <main className="flex-1 relative z-10 px-container-padding-mobile pt-stack-lg pb-32 max-w-2xl mx-auto w-full">
         {/* Profile Photo Section */}
         <section className="flex flex-col items-center mb-stack-lg">
-          <div className="relative group">
-            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl">
-              <img alt="Large Profile Avatar" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCA9T1OMGnkI7eZg8-3HBJVdHq3cndszd1ffMA1KufHo-KoHOXSMavHeROzsrTsn4W_uCdpDgshhZ9pBbIgnniEerEUbveIzvrtK8XTAJiyASDVdeeawv0vM9e7CfYklItoz4dtA1z8LQYvkUxsg0SxyXeiEOSyOHvOeoLmaI1WCe8qITLYMnwe-ds7OdmBI8c3Hzu75lQhyqp22WF9Z06q4RMRl0-TRjtcwtH2RJTqhxA3RRpOZOC8uWklvETyH18dig7jQ3w6og" />
+          <PhotoCrop onCropDone={handlePhotoCrop} aspect={1} circular>
+            <div className="relative group">
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-primary/20 shadow-2xl">
+                <img
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  src={displayUser?.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayUser?.name || 'User') + '&background=FF6B00&color=fff&size=200'}
+                />
+              </div>
+              <div className="absolute bottom-1 right-1 bg-primary-container text-on-primary-container p-2 rounded-full shadow-lg active:scale-90 transition-transform flex items-center justify-center border border-white/20">
+                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>photo_camera</span>
+              </div>
+              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                <span className="text-white font-label-caps text-label-caps">UBAH FOTO</span>
+              </div>
             </div>
-            <button className="absolute bottom-1 right-1 bg-primary-container text-on-primary-container p-2 rounded-full shadow-lg active:scale-90 transition-transform flex items-center justify-center border border-white/20">
-              <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>photo_camera</span>
-            </button>
-            {/* Glass Overlay Edit (Mobile Friendly) */}
-            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px] cursor-pointer">
-              <span className="text-white font-label-caps text-label-caps">UBAH FOTO</span>
-            </div>
-          </div>
+          </PhotoCrop>
           <div className="mt-stack-md text-center">
             <h2 className="font-title-md text-title-md text-on-surface">{displayUser?.name || 'User'}</h2>
             <p className="text-primary font-label-caps text-label-caps tracking-widest mt-1">{displayUser?.memberType || 'REGULAR'}</p>

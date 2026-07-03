@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchApi } from '../lib/api';
 import { authClient } from '../lib/authClient';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Garage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,7 +40,7 @@ export default function Garage() {
             <img 
               alt="User profile" 
               className="w-full h-full object-cover" 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6dHIkIMrD2QYbps6toYH5xZFWiTsXzcpGspBMHA2vuUO1hH93b2OL4JLPhKL8dsSKGHjfhg0joFW_Iihg7McZghr015APMFWLIYskd4nwshe2Cip-lhw_u9h6g-oMjGKDvIq_SuaUJ4P_KNQjmIgD3yOwQkuiCtEGmfRrjmk2IPqWZQJpaj9QUTb53Ch3jY_I02XKDH9rcbzoVUdi1JKq1X1ssCZvF7uvH33yYzIx9hJ5_LDJKbpZgUF5qo3K-KuhWB6iKkgwDsI"
+              src={user?.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user?.name || 'User') + '&background=FF6B00&color=fff&size=200'}
             />
           </div>
           <span className="font-display-lg text-title-md tracking-tighter text-primary">IGNITION</span>

@@ -1,27 +1,63 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Cropper from 'react-easy-crop';
 import { fetchApi } from '../lib/api';
+
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+
+const getCroppedImg = async (imageSrc, pixelCrop) => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+  ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
+  return canvas.toDataURL('image/jpeg', 0.9);
+};
 
 export default function AddVehicle() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    brand: '',
-    currentOdometer: '',
-    tankCapacity: ''
+    name: '', brand: '', currentOdometer: '', tankCapacity: ''
   });
+
+  // Crop state
+  const [cropSrc, setCropSrc] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  const onCropComplete = useCallback((_, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSelectedImage(file);
     const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result);
+    reader.onload = () => setCropSrc(reader.result);
     reader.readAsDataURL(file);
+    e.target.value = ''; // reset so re-select works
+  };
+
+  const handleCropConfirm = async () => {
+    try {
+      const cropped = await getCroppedImg(cropSrc, croppedAreaPixels);
+      setImagePreview(cropped);
+      setCropSrc(null);
+    } catch (e) {
+      console.error('Crop failed', e);
+    }
   };
 
   const handleSave = async () => {
@@ -29,40 +65,26 @@ export default function AddVehicle() {
       alert("Mohon lengkapi data wajib (Nama, Merk, Odometer)");
       return;
     }
-    
     setIsProcessing(true);
     try {
       let imageUrl = null;
-      
-      // Upload image to Cloudinary if selected
-      if (selectedImage) {
-        const reader = new FileReader();
-        const base64 = await new Promise((resolve) => {
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(selectedImage);
-        });
-        
+      if (imagePreview) {
         const uploadRes = await fetchApi('/upload', {
           method: 'POST',
-          body: JSON.stringify({ file: base64 }),
+          body: JSON.stringify({ file: imagePreview }),
         });
         imageUrl = uploadRes.data?.url;
       }
-
       const response = await fetchApi('/vehicles', {
         method: 'POST',
         body: JSON.stringify({
-          name: formData.name,
-          brand: formData.brand,
+          name: formData.name, brand: formData.brand,
           currentOdometer: parseInt(formData.currentOdometer),
           tankCapacity: formData.tankCapacity ? parseFloat(formData.tankCapacity) : 0,
           imageUrl,
         })
       });
-      
-      if (response.success) {
-        navigate('/garage');
-      }
+      if (response.success) navigate('/garage');
     } catch (err) {
       console.error("Gagal menambah kendaraan", err);
       alert("Gagal menambah kendaraan");
@@ -124,7 +146,7 @@ export default function AddVehicle() {
             {imagePreview && (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setSelectedImage(null); setImagePreview(null); }}
+                onClick={(e) => { e.stopPropagation(); setImagePreview(null); }}
                 className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-8 h-8 flex items-center justify-center z-20 hover:bg-red-600 transition-colors"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
@@ -241,6 +263,53 @@ export default function AddVehicle() {
         className="fixed inset-0 pointer-events-none opacity-[0.03] z-0" 
         style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 0)', backgroundSize: '24px 24px' }}
       ></div>
+
+      {/* Crop Modal */}
+      {cropSrc && (
+        <div className="fixed inset-0 z-[200] bg-black flex flex-col">
+          <div className="relative flex-1">
+            <Cropper
+              image={cropSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={16 / 9}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+            />
+          </div>
+          {/* Controls */}
+          <div className="bg-black/90 px-4 py-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-white/60">zoom_out</span>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="flex-1 accent-primary-container"
+              />
+              <span className="material-symbols-outlined text-white/60">zoom_in</span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCropSrc(null)}
+                className="flex-1 py-3 rounded-xl border border-white/20 text-white font-body-lg"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleCropConfirm}
+                className="flex-1 py-3 rounded-xl bg-primary-container text-white font-body-lg"
+              >
+                Pilih
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

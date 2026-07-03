@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchApi } from '../lib/api';
+import PhotoCrop from '../components/PhotoCrop';
 
 export default function ChangeAccountInfo() {
   const navigate = useNavigate();
@@ -9,7 +10,8 @@ export default function ChangeAccountInfo() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phoneNumber: ''
+    phoneNumber: '',
+    image: '',
   });
 
   useEffect(() => {
@@ -20,7 +22,8 @@ export default function ChangeAccountInfo() {
           setFormData({
             name: response.data.name || '',
             email: response.data.email || '',
-            phoneNumber: response.data.phoneNumber || ''
+            phoneNumber: response.data.phoneNumber || '',
+            image: response.data.image || '',
           });
         }
       } catch (err) {
@@ -30,6 +33,18 @@ export default function ChangeAccountInfo() {
     loadProfile();
   }, []);
 
+  const handlePhotoCrop = async (base64) => {
+    try {
+      const uploadRes = await fetchApi('/upload', { method: 'POST', body: JSON.stringify({ file: base64 }) });
+      const imageUrl = uploadRes.data?.url;
+      if (imageUrl) {
+        setFormData((prev) => ({ ...prev, image: imageUrl }));
+      }
+    } catch (err) {
+      console.error('Upload foto profil gagal', err);
+    }
+  };
+
   const handleSave = async () => {
     setIsProcessing(true);
     try {
@@ -37,7 +52,8 @@ export default function ChangeAccountInfo() {
         method: 'PUT',
         body: JSON.stringify({
           name: formData.name,
-          phoneNumber: formData.phoneNumber
+          phoneNumber: formData.phoneNumber,
+          image: formData.image,
         })
       });
       if (response.success) {
@@ -62,23 +78,25 @@ export default function ChangeAccountInfo() {
           <h1 className="font-headline-lg-mobile text-headline-lg-mobile font-bold tracking-tight text-on-surface">Ubah Informasi Pribadi</h1>
         </div>
         <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border border-white/12">
-          <img alt="User Profile" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3gwQpuvZ6zzPQKPxWghNnsP_zSZXuz9-dhCA_0jYIgQbQiUks1M0IlUUxBwdfiWiAdZijelkNa7gRvFChLUJhUKM4ZwvvwcrS2ViSClLVZNqOysUsJmjRyjDEkZzavckIjbJCu-5hzb17883Wkue8pqGW4XxvY8OUIykIRvZjOkq0AiY2aLrsVc-Ud56O0LUoo3S6tOLLxV2qrGlE_VooYy3Jp6AyQGQO-wPR0mcgjHECczpi19RPvUf2zr8RjxKHpsxAzk_5C9Y" />
+          <img alt="User Profile" className="w-full h-full object-cover" src={formData.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(formData.name || 'User') + '&background=FF6B00&color=fff&size=200'} />
         </div>
       </header>
 
       <main className="min-h-screen px-container-padding-mobile py-stack-lg pb-32">
         {/* Profile Picture Update Section */}
         <section className="flex flex-col items-center mb-stack-lg">
-          <div className="relative">
-            <div className="w-32 h-32 rounded-full border-2 border-primary/30 p-1">
-              <div className="w-full h-full rounded-full overflow-hidden glass-card">
-                <img alt="User Profile" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdHWxjQ8IC1gGN_lOyx33yra30pRFZIoTmuvtbcyohKu3-N9Siiy3eIfuWyQGBpoEF7N5srpEX9Ach69kBJ7vgChzvuFC_EX8g8xlEotOMzjuRjeb-zVFRBNXcxEn7y8DHRveWt2VDqnzblu7RfDxqPbCWOcp-ldFffIkA0pKhcZ-SbrQ7Mo0i4VACFZgYbjO2CFXRts_6XLnYRi7ky6PrCT-cFM4b3acdu7cBNaz3vRxKkN8kWVDcvhd1e5F7QEWYdrMehK0JsaU" />
+          <PhotoCrop onCropDone={handlePhotoCrop} aspect={1} circular>
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full border-2 border-primary/30 p-1">
+                <div className="w-full h-full rounded-full overflow-hidden glass-card">
+                  <img alt="User Profile" className="w-full h-full object-cover" src={formData.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(formData.name || 'User') + '&background=FF6B00&color=fff&size=200'} />
+                </div>
+              </div>
+              <div className="absolute bottom-1 right-1 w-10 h-10 bg-primary-container rounded-full flex items-center justify-center text-on-primary-container shadow-lg active:scale-90 transition-transform">
+                <span className="material-symbols-outlined text-[20px]">photo_camera</span>
               </div>
             </div>
-            <button className="absolute bottom-1 right-1 w-10 h-10 bg-primary-container rounded-full flex items-center justify-center text-on-primary-container shadow-lg active:scale-90 transition-transform">
-              <span className="material-symbols-outlined text-[20px]">photo_camera</span>
-            </button>
-          </div>
+          </PhotoCrop>
           <p className="mt-stack-md font-label-caps text-label-caps text-on-surface-variant/70 uppercase tracking-widest">Ubah Foto Profil</p>
         </section>
 
