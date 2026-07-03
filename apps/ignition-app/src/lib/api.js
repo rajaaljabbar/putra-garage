@@ -1,5 +1,6 @@
 // API Helper for requests
-export const API_URL = "http://localhost:5000/api";
+// In production (Vercel), API is on the same domain; in dev, it's localhost:5000
+export const API_URL = import.meta.env.PROD ? "/api" : "http://localhost:5000/api";
 
 export const fetchApi = async (endpoint, options = {}) => {
   const defaultHeaders = {

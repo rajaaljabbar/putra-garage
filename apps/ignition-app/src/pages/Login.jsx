@@ -35,7 +35,7 @@ export default function Login() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/garage",
+        callbackURL: `${window.location.origin}/garage`,
       });
     } catch (err) {
       setErrorMsg('Login dengan Google gagal');

@@ -5,6 +5,12 @@
     "apps/*",
     "packages/*"
   ],
+  "scripts": {
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:web": "cd apps/ignition-app && npm run dev",
+    "build:web": "cd apps/ignition-app && npm run build",
+    "vercel-build": "cd apps/ignition-app && npm run build"
+  },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "better-auth": "^1.6.20",

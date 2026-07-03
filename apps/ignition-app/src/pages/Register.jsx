@@ -42,7 +42,7 @@ export default function Register() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/garage",
+        callbackURL: `${window.location.origin}/garage`,
       });
     } catch (err) {
       setErrorMsg('Pendaftaran dengan Google gagal');
