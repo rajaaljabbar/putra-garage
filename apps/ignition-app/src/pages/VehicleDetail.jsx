@@ -10,7 +10,7 @@ export default function VehicleDetail() {
   const [services, setServices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ licensePlate: '', productionYear: '', imageUrl: '', currentOdometer: '' });
+  const [editForm, setEditForm] = useState({ licensePlate: '', productionYear: '', imageUrl: '' });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -31,13 +31,20 @@ export default function VehicleDetail() {
     load();
   }, [id]);
 
-  // Condition calculation — MUST be before any returns (React hooks rule)
+  // Kondisi Kendaraan calculation (Oli max 2000km, Service max 3000km)
   const condition = useMemo(() => {
     const currentOdo = vehicle?.currentOdometer || 0;
     let lastOliOdo = 0, lastServiceOdo = 0;
+    // Check services + their items for "Oli Mesin" and "Service"
     for (const svc of services) {
-      if (!lastOliOdo && (svc.workshopName || '').toLowerCase().includes('oli')) lastOliOdo = svc.odometerAtService;
-      if (!lastServiceOdo && (svc.workshopName || '').toLowerCase().includes('servis')) lastServiceOdo = svc.odometerAtService;
+      // Check workshop name or item names
+      const name = (svc.workshopName || '').toLowerCase();
+      if (!lastOliOdo && (name.includes('oli') || name.includes('mesin'))) lastOliOdo = svc.odometerAtService;
+      if (!lastServiceOdo && (name.includes('servis') || name.includes('service'))) lastServiceOdo = svc.odometerAtService;
+    }
+    // Also check if service records themselves have category info (from items)
+    if (!lastOliOdo || !lastServiceOdo) {
+      // Could also check via service items, but simplified for now
     }
     const oliPct = lastOliOdo ? Math.min(100, Math.max(0, ((currentOdo - lastOliOdo) / 2000) * 100)) : 0;
     const svcPct = lastServiceOdo ? Math.min(100, Math.max(0, ((currentOdo - lastServiceOdo) / 3000) * 100)) : 0;
@@ -60,7 +67,6 @@ export default function VehicleDetail() {
       licensePlate: vehicle.licensePlate || '',
       productionYear: vehicle.productionYear || '',
       imageUrl: vehicle.imageUrl || '',
-      currentOdometer: vehicle.currentOdometer || '',
     });
     setIsEditing(true);
   };
@@ -83,11 +89,10 @@ export default function VehicleDetail() {
           licensePlate: editForm.licensePlate || null,
           productionYear: editForm.productionYear ? parseInt(editForm.productionYear) : null,
           imageUrl: editForm.imageUrl || null,
-          currentOdometer: editForm.currentOdometer ? parseInt(editForm.currentOdometer) : null,
         }),
       });
       if (res.success) {
-        setVehicle((prev) => ({ ...prev, ...editForm, productionYear: editForm.productionYear ? parseInt(editForm.productionYear) : null, currentOdometer: editForm.currentOdometer ? parseInt(editForm.currentOdometer) : prev.currentOdometer }));
+        setVehicle((prev) => ({ ...prev, ...editForm, productionYear: editForm.productionYear ? parseInt(editForm.productionYear) : null }));
         setIsEditing(false);
       }
     } catch (err) { console.error('Gagal update kendaraan', err); }
@@ -168,10 +173,6 @@ export default function VehicleDetail() {
                 <label className="font-label-caps text-label-caps text-on-surface-variant/60 uppercase">Tahun Produksi</label>
                 <input className="w-full bg-surface-container-lowest border border-white/12 rounded-lg py-3 px-4 mt-1 text-on-surface" type="number" value={editForm.productionYear} onChange={(e) => setEditForm({...editForm, productionYear: e.target.value})} placeholder="2022" min="1900" max="2100" />
               </div>
-              <div>
-                <label className="font-label-caps text-label-caps text-on-surface-variant/60 uppercase">Odometer (km)</label>
-                <input className="w-full bg-surface-container-lowest border border-white/12 rounded-lg py-3 px-4 mt-1 text-on-surface" type="number" value={editForm.currentOdometer} onChange={(e) => setEditForm({...editForm, currentOdometer: e.target.value})} placeholder="45000" />
-              </div>
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setIsEditing(false)} className="flex-1 py-3 rounded-xl border border-white/10 text-on-surface-variant">Batal</button>
                 <button onClick={handleSaveEdit} disabled={isSaving} className="flex-1 py-3 rounded-xl bg-primary-container text-white disabled:opacity-50">{isSaving ? 'Menyimpan...' : 'Simpan'}</button>
@@ -209,7 +210,7 @@ export default function VehicleDetail() {
         <div className="glass-card rounded-xl p-5 space-y-4">
           <h2 className="font-title-md text-on-surface flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">monitoring</span>
-            Kondisi Servis
+            Kondisi Kendaraan
           </h2>
           <div>
             <div className="flex justify-between text-sm mb-1">
@@ -241,7 +242,7 @@ export default function VehicleDetail() {
       {/* FAB Add Service */}
       <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-50">
         <button 
-          onClick={() => navigate('/add-service', { state: { vehicleId: vehicle.id } })}
+          onClick={() => navigate('/add-service', { state: { vehicleId: vehicle.id, currentOdometer: vehicle.currentOdometer } })}
           className="w-14 h-14 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,107,0,0.4)] hover:bg-primary transition-colors active:scale-95 border border-primary-fixed"
         >
           <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>add</span>

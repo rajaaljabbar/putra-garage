@@ -24,6 +24,7 @@ export default function AddService() {
   const navigate = useNavigate();
   const location = useLocation();
   const vehicleId = location.state?.vehicleId;
+  const currentVehicleOdo = location.state?.currentOdometer || 0;
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [category, setCategory] = useState('Servis');
@@ -96,6 +97,13 @@ export default function AddService() {
     if (!vehicleId) return setErrorMsg("Kendaraan tidak ditemukan");
     setIsProcessing(true);
     setErrorMsg('');
+
+    // Odometer validation: can't be lower than current
+    if ((category === 'Servis' || category === 'Isi Bensin') && odometer && parseInt(odometer) < currentVehicleOdo) {
+      setErrorMsg(`Odometer tidak boleh kurang dari ${currentVehicleOdo.toLocaleString()} km`);
+      setIsProcessing(false);
+      return;
+    }
     try {
       let record, serviceItems;
       if (category === 'Isi Bensin') {
@@ -153,12 +161,18 @@ export default function AddService() {
             <div className="relative"><span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70">speed</span>
               <input className="w-full bg-surface-container-low border border-white/10 rounded-xl py-3 pl-12 pr-4 text-on-surface focus:outline-none focus:border-primary-container transition-all" placeholder="15000" type="number" value={odometer} onChange={e => setOdometer(e.target.value)} />
             </div>
+            <p className="text-[10px] text-on-surface-variant/40 mt-1">Odometer saat ini: {currentVehicleOdo.toLocaleString()} km</p>
           </div>
         )}
 
         {category === 'Isi Bensin' && (
           <section className="glass-card rounded-xl p-5 space-y-4">
             <h2 className="font-title-md text-on-surface border-b border-white/10 pb-3">Detail Isi Bensin</h2>
+            <div>
+              <label className="font-label-caps text-[10px] text-on-surface-variant/60 uppercase">Odometer (km)</label>
+              <input className="w-full bg-surface-container-low border border-white/10 rounded-lg py-2.5 px-3 mt-1 text-on-surface" type="number" placeholder="46264" value={odometer} onChange={e => setOdometer(e.target.value)} />
+              <p className="text-[10px] text-on-surface-variant/40 mt-1">Odometer saat ini: {currentVehicleOdo.toLocaleString()} km</p>
+            </div>
             <div>
               <label className="font-label-caps text-[10px] text-on-surface-variant/60 uppercase">Merk BBM</label>
               <select className="w-full bg-surface-container-low border border-white/10 rounded-lg py-2.5 px-3 mt-1 text-on-surface" value={fuelBrand} onChange={e => { setFuelBrand(e.target.value); setFuelType(FUEL_BRANDS[e.target.value]?.[0] || ''); }}>
