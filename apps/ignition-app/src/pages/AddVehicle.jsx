@@ -27,6 +27,7 @@ export default function AddVehicle() {
   const fileInputRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({
     name: '', brand: '', currentOdometer: '', tankCapacity: '', licensePlate: '', productionYear: ''
   });
@@ -62,9 +63,10 @@ export default function AddVehicle() {
 
   const handleSave = async () => {
     if (!formData.name || !formData.brand || !formData.currentOdometer) {
-      alert("Mohon lengkapi data wajib (Nama, Merk, Odometer)");
+      setErrorMsg("Mohon lengkapi data wajib (Nama, Merk, Odometer)");
       return;
     }
+    setErrorMsg('');
     setIsProcessing(true);
     try {
       let imageUrl = null;
@@ -88,8 +90,7 @@ export default function AddVehicle() {
       });
       if (response.success) navigate('/garage');
     } catch (err) {
-      console.error("Gagal menambah kendaraan", err);
-      alert("Gagal menambah kendaraan");
+      setErrorMsg("Gagal menambah kendaraan");
     } finally {
       setIsProcessing(false);
     }
@@ -117,6 +118,9 @@ export default function AddVehicle() {
       </header>
 
       <main className="pt-24 pb-32 px-container-padding-mobile max-w-md mx-auto relative z-10">
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm text-center">{errorMsg}</div>
+        )}
         {/* Hero Section: Image Upload */}
         <section className="mb-stack-lg">
           <input

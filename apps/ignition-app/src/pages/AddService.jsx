@@ -25,6 +25,7 @@ export default function AddService() {
   const location = useLocation();
   const vehicleId = location.state?.vehicleId;
   const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [category, setCategory] = useState('Servis');
   const [odometer, setOdometer] = useState('');
   const [workshopName, setWorkshopName] = useState('');
@@ -92,16 +93,17 @@ export default function AddService() {
   const grandTotal = category === 'Isi Bensin' ? fuelCalc.total : items.reduce((acc, c) => acc + (parseInt(c.cost) || 0), 0);
 
   const handleSave = async () => {
-    if (!vehicleId) return alert("No vehicle selected");
+    if (!vehicleId) return setErrorMsg("Kendaraan tidak ditemukan");
     setIsProcessing(true);
+    setErrorMsg('');
     try {
       let record, serviceItems;
       if (category === 'Isi Bensin') {
-        if (!fuelTotalRp || !fuelPrice) return alert("Mohon isi harga/liter dan total bayar");
+        if (!fuelTotalRp || !fuelPrice) return setErrorMsg("Mohon isi harga/liter dan total bayar");
         record = { odometerAtService: odometer || '0', workshopName: fuelBrand, totalCost: grandTotal, receiptImageUrl: receiptUrl || null };
         serviceItems = [{ itemName: `${fuelBrand} - ${fuelType}`, cost: grandTotal, category: 'Isi Bensin' }];
       } else if (category === 'Servis') {
-        if (!odometer) return alert("Mohon isi odometer");
+        if (!odometer) return setErrorMsg("Mohon isi odometer");
         const valid = items.filter(i => i.itemName && i.cost);
         record = { odometerAtService: odometer, workshopName, totalCost: grandTotal, receiptImageUrl: receiptUrl || null };
         serviceItems = valid.map(i => ({ ...i, category: 'Servis' }));
@@ -112,7 +114,7 @@ export default function AddService() {
       }
       const res = await fetchApi(`/services/vehicle/${vehicleId}`, { method: 'POST', body: JSON.stringify({ record, items: serviceItems }) });
       if (res.success) navigate(`/history?vehicleId=${vehicleId}`);
-    } catch (err) { console.error(err); alert("Gagal mencatat"); }
+    } catch (err) { setErrorMsg("Gagal mencatat: " + (err.message || '')); }
     finally { setIsProcessing(false); }
   };
 
@@ -128,6 +130,10 @@ export default function AddService() {
         <div className="w-10"></div>
       </header>
       <main className="relative z-10 flex-grow px-container-padding-mobile pt-stack-lg pb-[120px] max-w-3xl md:mx-auto w-full flex flex-col gap-stack-lg">
+
+        {errorMsg && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">{errorMsg}</div>
+        )}
 
         <section className="glass-card rounded-xl p-4">
           <p className="font-label-caps text-label-caps text-on-surface-variant/60 uppercase mb-3">Kategori</p>

@@ -197,8 +197,8 @@ export default function Register() {
           </button>
           <button 
             type="button"
-            onClick={() => alert('Login dengan Apple saat ini belum tersedia.')}
-            className="flex items-center justify-center py-3 glass-card rounded-lg hover:bg-white/10 transition-colors"
+            disabled
+            className="flex items-center justify-center py-3 glass-card rounded-lg opacity-30 cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-xl mr-2" style={{ fontVariationSettings: "'FILL' 1" }}>apps</span>
             <span className="font-body-sm text-body-sm">Apple</span>
@@ -220,7 +220,7 @@ export default function Register() {
         <img 
           className="absolute bottom-0 w-full h-full object-cover" 
           alt="A low-angle high-speed motion blur shot of a luxury performance sports car's glowing taillights at night." 
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnynKnnrPrczpyyk5VYTO6lGhBQkQo1StsbynF_7bybnDE8-0KvnKmZjxhb1mTP1GT6Hm2xDKeNgnlkottwL26QrSYpUzUhnaWG4r484BPGwiHON7VeYJRY9p8zplu-mW8-6Swke1E-UxNJwx8JlPx3h67UB14Jl9sWFPWOq8Qal429HkJLWOGT_iXaV57qkZl598YURLH3gQgnhtgqJmXiP4Oxx1yHKtFzSGodnSHb0zhJ-UO4OncDc3IHhaf4uZy9YQQNzfYJgc"
+          src="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&q=80"
         />
       </div>
     </div>

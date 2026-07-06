@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./config/auth";
 import { env } from "./config/env";
@@ -11,6 +12,13 @@ import serviceRoutes from "./routes/service.routes";
 import uploadRoutes from "./routes/upload.routes";
 
 const app = express();
+
+// Rate limiting
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { success: false, message: "Too many attempts" } });
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+
+app.use("/api/auth", authLimiter);
+app.use("/api", generalLimiter);
 
 // CORS - allow local dev & Vercel preview
 const allowedOrigins = [

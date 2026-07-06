@@ -3,8 +3,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { fetchApi } from '../lib/api';
 import PhotoCrop from '../components/PhotoCrop';
 
-const DEFAULT_BIKE_IMG = 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&q=80';
-
 export default function VehicleDetail() {
   const navigate = useNavigate();
   const { id } = useParams();

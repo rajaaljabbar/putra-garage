@@ -11,6 +11,7 @@ export default function AccountInfo() {
   const [userProfile, setUserProfile] = useState(null);
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -62,9 +63,9 @@ export default function AccountInfo() {
     } catch (err) {
       console.error(err);
       if (err.name === 'AbortError') {
-        alert('Penghapusan terlalu lama. Coba lagi nanti.');
+        setDeleteError('Penghapusan terlalu lama. Coba lagi nanti.');
       } else {
-        alert('Gagal: ' + err.message);
+        setDeleteError('Gagal: ' + err.message);
       }
       setIsDeleting(false);
       setShowDeletePopup(false);
@@ -223,6 +224,7 @@ export default function AccountInfo() {
       {showDeletePopup && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
           <div className="glass-card rounded-2xl p-6 w-full max-w-sm animate-in fade-in zoom-in duration-200">
+            {deleteError && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm text-center">{deleteError}</div>}
             <div className="flex flex-col items-center text-center mb-6">
               <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-red-400 text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>

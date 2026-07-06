@@ -6,6 +6,7 @@ import PhotoCrop from '../components/PhotoCrop';
 export default function ChangeAccountInfo() {
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -61,7 +62,7 @@ export default function ChangeAccountInfo() {
       }
     } catch (err) {
       console.error("Failed to update profile", err);
-      alert('Gagal menyimpan profil');
+      setErrorMsg('Gagal menyimpan profil');
     } finally {
       setIsProcessing(false);
     }
@@ -83,6 +84,9 @@ export default function ChangeAccountInfo() {
       </header>
 
       <main className="min-h-screen px-container-padding-mobile py-stack-lg pb-32">
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm text-center">{errorMsg}</div>
+        )}
         {/* Profile Picture Update Section */}
         <section className="flex flex-col items-center mb-stack-lg">
           <PhotoCrop onCropDone={handlePhotoCrop} aspect={1} circular>
