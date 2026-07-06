@@ -2,30 +2,39 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authClient } from '../lib/authClient';
 
 const AuthContext = createContext();
+const CACHE_KEY = 'pg_user_cache';
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    // Instant local cache — no loading spinner on refresh
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  });
+  const [isLoading, setIsLoading] = useState(!user);
 
   useEffect(() => {
-    // Better Auth provides a useSession hook, but we can also fetch it directly
-    const checkSession = async () => {
+    let cancelled = false;
+    const verify = async () => {
       try {
         const { data, error } = await authClient.getSession();
-        if (data && data.user) {
+        if (cancelled) return;
+        if (data?.user) {
           setUser(data.user);
+          localStorage.setItem(CACHE_KEY, JSON.stringify(data.user));
         } else {
           setUser(null);
+          localStorage.removeItem(CACHE_KEY);
         }
-      } catch (err) {
-        console.error("Session check failed", err);
-        setUser(null);
+      } catch {
+        if (!cancelled) { /* keep cached user */ }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
-    
-    checkSession();
+    verify();
+    return () => { cancelled = true; };
   }, []);
 
   return (

@@ -28,7 +28,7 @@ export default function AddVehicle() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', brand: '', currentOdometer: '', tankCapacity: ''
+    name: '', brand: '', currentOdometer: '', tankCapacity: '', licensePlate: '', productionYear: ''
   });
 
   // Crop state
@@ -81,6 +81,8 @@ export default function AddVehicle() {
           name: formData.name, brand: formData.brand,
           currentOdometer: parseInt(formData.currentOdometer),
           tankCapacity: formData.tankCapacity ? parseFloat(formData.tankCapacity) : 0,
+          licensePlate: formData.licensePlate || null,
+          productionYear: formData.productionYear ? parseInt(formData.productionYear) : null,
           imageUrl,
         })
       });
@@ -194,8 +196,38 @@ export default function AddVehicle() {
               </div>
             </div>
 
+            {/* Plat Nomor */}
+            <div className="space-y-2">
+              <label className="font-label-caps text-label-caps text-primary/70 ml-1">PLAT NOMOR</label>
+              <div className="relative group/input">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within/input:text-primary">pin</span>
+                <input 
+                  className="w-full bg-surface-container-lowest border border-white/12 rounded-lg py-4 pl-12 pr-4 font-body-lg text-on-surface focus:ring-0 focus:outline-none input-glow transition-all" 
+                  placeholder="F 1234 XX" 
+                  type="text"
+                  value={formData.licensePlate}
+                  onChange={e => setFormData({...formData, licensePlate: e.target.value})}
+                />
+              </div>
+            </div>
+
             {/* Split Grid */}
             <div className="grid grid-cols-2 gap-4">
+              {/* Tahun */}
+              <div className="space-y-2">
+                <label className="font-label-caps text-label-caps text-primary/70 ml-1 uppercase">Tahun</label>
+                <div className="relative group/input">
+                  <input 
+                    className="w-full bg-surface-container-lowest border border-white/12 rounded-lg py-4 px-4 font-body-lg text-on-surface focus:ring-0 focus:outline-none input-glow transition-all" 
+                    placeholder="2022" 
+                    type="number"
+                    min="1900" max="2100"
+                    value={formData.productionYear}
+                    onChange={e => setFormData({...formData, productionYear: e.target.value})}
+                  />
+                </div>
+              </div>
+
               {/* Odometer */}
               <div className="space-y-2">
                 <label className="font-label-caps text-label-caps text-primary/70 ml-1 uppercase">Odometer (km)</label>

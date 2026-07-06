@@ -28,6 +28,7 @@ export default function Garage() {
 
   const handleLogout = async () => {
     await authClient.signOut();
+    localStorage.removeItem('pg_user_cache');
     window.location.href = '/';
   };
 
@@ -70,7 +71,7 @@ export default function Garage() {
                 <img 
                   alt={vehicle.name}
                   className="w-full h-full object-cover opacity-80 mix-blend-luminosity group-hover:mix-blend-normal transition-all duration-500" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHphP7ahxgA9UnoNDdbuK1bDJZ3SFwCBmKqfmMYnM-SE4rzE-eQ44_bwSjOPqfna-bfcUtDm7of35pcX3gIRpO0ibgFRkz2KIGel4VCLhlFa65_-uvmgQ-2tC8Hl096OGeIEaIC7IWbKq80NeuSd0eT7Mvr_7V_uRZz7LsUqIfoyByCnDgOX7i19C5fF1vHc3JJnY_V2I4jpHsIYJGHotg-Y2e7JlWj63X-YJ3rD2IhwYwnSKvoPUmEonqvSZQQxNQ3hlc9t3Esu4"
+                  src={vehicle.imageUrl || 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=400&q=80'}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0B] to-transparent"></div>
               </div>
@@ -95,7 +96,7 @@ export default function Garage() {
         </div>
 
         {/* Add Vehicle Action */}
-        <div className="mt-8">
+        <div className="mt-8 mb-16">
           <button 
             onClick={() => navigate('/add-vehicle')}
             className="w-full h-14 bg-primary-container text-white rounded-lg flex items-center justify-center gap-2 font-title-md text-title-md hover:bg-primary-container/90 active:scale-[0.98] transition-all btn-glow border border-primary/50 relative overflow-hidden group"
