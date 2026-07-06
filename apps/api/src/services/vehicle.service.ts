@@ -1,9 +1,9 @@
 import { db } from '../config/db';
 import { vehicles } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, asc } from 'drizzle-orm';
 
 export const getVehiclesByUser = async (userId: string) => {
-  return await db.select().from(vehicles).where(eq(vehicles.userId, userId));
+  return await db.select().from(vehicles).where(eq(vehicles.userId, userId)).orderBy(asc(vehicles.createdAt));
 };
 
 export const getVehicleById = async (id: string, userId: string) => {
