@@ -109,7 +109,10 @@ export default function AddService() {
       if (category === 'Isi Bensin') {
         if (!fuelTotalRp || !fuelPrice) return setErrorMsg("Mohon isi harga/liter dan total bayar");
         record = { odometerAtService: odometer || '0', workshopName: fuelBrand, totalCost: grandTotal, receiptImageUrl: receiptUrl || null };
-        serviceItems = [{ itemName: `${fuelBrand} - ${fuelType}`, cost: grandTotal, category: 'Isi Bensin' }];
+        serviceItems = [
+          { itemName: `${fuelBrand} - ${fuelType}`, cost: grandTotal, category: 'Isi Bensin' },
+          { itemName: 'Liter', cost: fuelCalc.liters, category: 'Isi Bensin' }, // liters stored here
+        ];
       } else if (category === 'Servis') {
         if (!odometer) return setErrorMsg("Mohon isi odometer");
         const valid = items.filter(i => i.itemName && i.cost);

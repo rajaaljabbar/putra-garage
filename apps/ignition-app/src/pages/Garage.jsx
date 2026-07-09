@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { fetchApi } from '../lib/api';
 import { authClient } from '../lib/authClient';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Garage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [vehicles, setVehicles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,7 +25,7 @@ export default function Garage() {
       }
     };
     loadVehicles();
-  }, []);
+  }, [location.key]);
 
   const handleLogout = async () => {
     await authClient.signOut();

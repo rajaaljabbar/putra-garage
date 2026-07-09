@@ -1,13 +1,15 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 import { fetchApi } from '../lib/api';
 import PhotoCrop from '../components/PhotoCrop';
 
 export default function VehicleDetail() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const [vehicle, setVehicle] = useState(null);
   const [services, setServices] = useState([]);
+  const [fuelConsumption, setFuelConsumption] = useState({ current: null, previous: null });
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ licensePlate: '', productionYear: '', imageUrl: '' });
@@ -21,7 +23,38 @@ export default function VehicleDetail() {
           fetchApi(`/services/vehicle/${id}`),
         ]);
         if (vehRes.success) setVehicle(vehRes.data);
-        if (svcRes.success) setServices(svcRes.data || []);
+        if (svcRes.success) {
+          const svcs = svcRes.data || [];
+          setServices(svcs);
+
+          // Calculate fuel consumption from "Isi Bensin" fills
+          const fuelFills = svcs.filter(s => {
+            const n = (s.workshopName || '').toLowerCase();
+            return n.includes('pertamina') || n.includes('shell') || n.includes('bp') || n.includes('vivo') || n.includes('isi bensin');
+          }).sort((a, b) => a.odometerAtService - b.odometerAtService);
+
+          if (fuelFills.length >= 1) {
+            const results = [];
+            for (let i = 1; i < fuelFills.length; i++) {
+              try {
+                const itemsRes = await fetchApi(`/services/${fuelFills[i].id}`);
+                if (itemsRes.success) {
+                  const literItem = itemsRes.data.find(it => it.itemName === 'Liter');
+                  if (literItem) {
+                    const liters = parseFloat(literItem.cost);
+                    const kmDelta = fuelFills[i].odometerAtService - fuelFills[i-1].odometerAtService;
+                    if (liters > 0 && kmDelta > 0) results.push(kmDelta / liters);
+                  }
+                }
+              } catch {}
+            }
+            if (results.length >= 2) {
+              setFuelConsumption({ current: results[results.length - 1], previous: results[results.length - 2] });
+            } else if (results.length === 1) {
+              setFuelConsumption({ current: results[0], previous: null });
+            }
+          }
+        }
       } catch (err) {
         console.error("Failed to load vehicle", err);
       } finally {
@@ -29,7 +62,7 @@ export default function VehicleDetail() {
       }
     };
     load();
-  }, [id]);
+  }, [id, location.key]);
 
   // Kondisi Kendaraan calculation (Oli max 2000km, Service max 3000km)
   const condition = useMemo(() => {
@@ -212,6 +245,26 @@ export default function VehicleDetail() {
             <span className="material-symbols-outlined text-primary">monitoring</span>
             Kondisi Kendaraan
           </h2>
+
+          {/* Fuel Consumption */}
+          {fuelConsumption.current ? (
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-on-surface-variant">⛽ Konsumsi BBM Saat Ini</span>
+                <span className="text-primary font-semibold text-xs">{fuelConsumption.current.toFixed(1)} km/L</span>
+              </div>
+              <div className="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+                <div className="h-full bg-primary-container rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (fuelConsumption.current / 70) * 100)}%` }}></div>
+              </div>
+              {fuelConsumption.previous && (
+                <p className="text-[10px] text-on-surface-variant/40 mt-1">Sebelumnya: {fuelConsumption.previous.toFixed(1)} km/L</p>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-2">
+              <span className="text-on-surface-variant/40 text-sm">⛽ Isi bensin 2x dengan odometer untuk lihat konsumsi</span>
+            </div>
+          )}
           <div>
             <div className="flex justify-between text-sm mb-1">
               <span className="text-on-surface-variant">🛢️ Oli Mesin</span>

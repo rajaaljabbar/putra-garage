@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 import { fetchApi } from '../lib/api';
 
@@ -6,6 +6,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', '
 
 export default function HistoryService() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const vehicleId = searchParams.get('vehicleId');
   
@@ -57,7 +58,7 @@ export default function HistoryService() {
       }
     };
     loadData();
-  }, [vehicleId]);
+  }, [vehicleId, location.key]);
 
   // All years range (current year ±1 if no data)
   const availableYears = useMemo(() => {
