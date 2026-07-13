@@ -39,6 +39,7 @@ export default function PhotoCrop({ children, onCropDone, aspect = 1, circular =
   };
 
   const handleConfirm = async () => {
+    if (!croppedAreaPixels || !cropSrc) return;
     try {
       const cropped = await getCroppedImg(cropSrc, croppedAreaPixels);
       onCropDone(cropped);
@@ -56,7 +57,7 @@ export default function PhotoCrop({ children, onCropDone, aspect = 1, circular =
       </div>
 
       {cropSrc && (
-        <div className="fixed inset-0 z-[200] bg-black flex flex-col">
+        <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
           <div className="relative flex-1">
             <Cropper
               image={cropSrc}
@@ -69,14 +70,13 @@ export default function PhotoCrop({ children, onCropDone, aspect = 1, circular =
               onCropComplete={onCropComplete}
             />
           </div>
-          <div className="bg-black/90 px-4 py-4 space-y-4">
+          <div className="bg-black/90 px-4 py-4 pb-24 space-y-4">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-white/60">zoom_out</span>
               <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="flex-1 accent-primary-container" />
               <span className="material-symbols-outlined text-white/60">zoom_in</span>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setCropSrc(null)} className="flex-1 py-3 rounded-xl border border-white/20 text-white font-body-lg">Batal</button>
               <button onClick={handleConfirm} className="flex-1 py-3 rounded-xl bg-primary-container text-white font-body-lg">Pilih</button>
             </div>
           </div>

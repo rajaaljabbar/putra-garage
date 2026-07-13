@@ -28,6 +28,7 @@ export default function AddService() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [category, setCategory] = useState('Servis');
+  const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]); // today
   const [odometer, setOdometer] = useState('');
   const [workshopName, setWorkshopName] = useState('');
   const [items, setItems] = useState([{ itemName: '', cost: '' }]);
@@ -38,6 +39,7 @@ export default function AddService() {
 
   // Receipt upload
   const [receiptUrl, setReceiptUrl] = useState('');
+  const [isUploadingNota, setIsUploadingNota] = useState(false);
 
   // Grooming "Lainnya" custom input
   const [customLainnya, setCustomLainnya] = useState({ name: '', cost: '' });
@@ -85,10 +87,12 @@ export default function AddService() {
   };
 
   const handleReceiptCrop = async (base64) => {
+    setIsUploadingNota(true);
     try {
       const res = await fetchApi('/upload', { method: 'POST', body: JSON.stringify({ file: base64 }) });
       if (res.data?.url) setReceiptUrl(res.data.url);
     } catch (e) { console.error('Upload nota gagal', e); }
+    finally { setIsUploadingNota(false); }
   };
 
   const grandTotal = category === 'Isi Bensin' ? fuelCalc.total : items.reduce((acc, c) => acc + (parseInt(c.cost) || 0), 0);
@@ -107,20 +111,20 @@ export default function AddService() {
     try {
       let record, serviceItems;
       if (category === 'Isi Bensin') {
-        if (!fuelTotalRp || !fuelPrice) return setErrorMsg("Mohon isi harga/liter dan total bayar");
-        record = { odometerAtService: odometer || '0', workshopName: fuelBrand, totalCost: grandTotal, receiptImageUrl: receiptUrl || null };
+        if (!fuelTotalRp || !fuelPrice) { setIsProcessing(false); return setErrorMsg("Mohon isi harga/liter dan total bayar"); }
+        record = { odometerAtService: odometer || '0', workshopName: fuelBrand, totalCost: grandTotal, receiptImageUrl: receiptUrl || null, serviceDate };
         serviceItems = [
           { itemName: `${fuelBrand} - ${fuelType}`, cost: grandTotal, category: 'Isi Bensin' },
-          { itemName: 'Liter', cost: fuelCalc.liters, category: 'Isi Bensin' }, // liters stored here
+          { itemName: 'Liter', cost: fuelCalc.liters, category: 'Isi Bensin' },
         ];
       } else if (category === 'Servis') {
-        if (!odometer) return setErrorMsg("Mohon isi odometer");
+        if (!odometer) { setIsProcessing(false); return setErrorMsg("Mohon isi odometer"); }
         const valid = items.filter(i => i.itemName && i.cost);
-        record = { odometerAtService: odometer, workshopName, totalCost: grandTotal, receiptImageUrl: receiptUrl || null };
+        record = { odometerAtService: odometer, workshopName, totalCost: grandTotal, receiptImageUrl: receiptUrl || null, serviceDate };
         serviceItems = valid.map(i => ({ ...i, category: 'Servis' }));
       } else {
         const valid = items.filter(i => i.itemName && i.cost);
-        record = { odometerAtService: '0', workshopName, totalCost: grandTotal, receiptImageUrl: receiptUrl || null };
+        record = { odometerAtService: '0', workshopName, totalCost: grandTotal, receiptImageUrl: receiptUrl || null, serviceDate };
         serviceItems = valid.map(i => ({ ...i, category: 'Grooming' }));
       }
       const res = await fetchApi(`/services/vehicle/${vehicleId}`, { method: 'POST', body: JSON.stringify({ record, items: serviceItems }) });
@@ -157,6 +161,15 @@ export default function AddService() {
             ))}
           </div>
         </section>
+
+        {/* Date Picker */}
+        <div className="flex flex-col gap-stack-sm">
+          <label className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest pl-1">Tanggal</label>
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70">calendar_today</span>
+            <input className="w-full bg-surface-container-low border border-white/10 rounded-xl py-3 pl-12 pr-4 text-on-surface focus:outline-none focus:border-primary-container transition-all" type="date" value={serviceDate} onChange={e => setServiceDate(e.target.value)} />
+          </div>
+        </div>
 
         {category === 'Servis' && (
           <div className="flex flex-col gap-stack-sm">
@@ -278,13 +291,18 @@ export default function AddService() {
 
         <section className="flex flex-col gap-stack-sm mt-2">
           <p className="font-label-caps text-label-caps text-on-surface-variant/60 uppercase">Unggah Nota</p>
-          {receiptUrl ? (
+          {isUploadingNota ? (
+            <div className="glass-card rounded-xl py-8 flex flex-col items-center justify-center gap-3">
+              <div className="w-8 h-8 border-4 border-primary-container/30 border-t-primary-container rounded-full animate-spin"></div>
+              <span className="text-on-surface-variant font-body-sm">Mengunggah...</span>
+            </div>
+          ) : receiptUrl ? (
             <div className="relative">
               <img src={receiptUrl} alt="Nota" className="w-full h-48 object-contain rounded-xl glass-card" />
               <button onClick={() => setReceiptUrl('')} className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center"><span className="material-symbols-outlined text-sm">close</span></button>
             </div>
           ) : (
-            <PhotoCrop onCropDone={handleReceiptCrop} aspect={4/3}>
+            <PhotoCrop onCropDone={handleReceiptCrop} aspect={21/33}>
               <div className="w-full glass-card rounded-xl py-6 flex flex-col items-center justify-center gap-3 hover:bg-white/10 transition-colors cursor-pointer">
                 <div className="w-14 h-14 rounded-full bg-surface-container-highest border border-white/10 flex items-center justify-center hover:scale-110 transition-all shadow-lg"><span className="material-symbols-outlined text-primary text-[28px]">photo_camera</span></div>
                 <span className="font-title-md text-on-surface">Unggah Nota</span>
