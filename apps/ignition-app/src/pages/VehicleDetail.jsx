@@ -9,6 +9,7 @@ export default function VehicleDetail() {
   const { id } = useParams();
   const [vehicle, setVehicle] = useState(null);
   const [services, setServices] = useState([]);
+  const [serviceItemsMap, setServiceItemsMap] = useState({});
   const [fuelConsumption, setFuelConsumption] = useState({ current: null, previous: null });
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -27,26 +28,33 @@ export default function VehicleDetail() {
           const svcs = svcRes.data || [];
           setServices(svcs);
 
+          // Fetch items for all services (for condition + fuel calc)
+          const itemsMap = {};
+          await Promise.all(svcs.map(async (svc) => {
+            try {
+              const itemsRes = await fetchApi(`/services/${svc.id}`);
+              if (itemsRes.success) itemsMap[svc.id] = itemsRes.data;
+            } catch {}
+          }));
+          setServiceItemsMap(itemsMap);
+
           // Calculate fuel consumption from "Isi Bensin" fills
           const fuelFills = svcs.filter(s => {
-            const n = (s.workshopName || '').toLowerCase();
-            return n.includes('pertamina') || n.includes('shell') || n.includes('bp') || n.includes('vivo') || n.includes('isi bensin');
+            const items = itemsMap[s.id] || [];
+            const hasFuel = items.some(it => it.category === 'Isi Bensin');
+            return hasFuel;
           }).sort((a, b) => a.odometerAtService - b.odometerAtService);
 
           if (fuelFills.length >= 1) {
             const results = [];
             for (let i = 1; i < fuelFills.length; i++) {
-              try {
-                const itemsRes = await fetchApi(`/services/${fuelFills[i].id}`);
-                if (itemsRes.success) {
-                  const literItem = itemsRes.data.find(it => it.itemName === 'Liter');
-                  if (literItem) {
-                    const liters = parseFloat(literItem.cost);
-                    const kmDelta = fuelFills[i].odometerAtService - fuelFills[i-1].odometerAtService;
-                    if (liters > 0 && kmDelta > 0) results.push(kmDelta / liters);
-                  }
-                }
-              } catch {}
+              const items = itemsMap[fuelFills[i].id] || [];
+              const literItem = items.find(it => it.itemName === 'Liter');
+              if (literItem) {
+                const liters = parseFloat(literItem.cost);
+                const kmDelta = fuelFills[i].odometerAtService - fuelFills[i-1].odometerAtService;
+                if (liters > 0 && kmDelta > 0) results.push(kmDelta / liters);
+              }
             }
             if (results.length >= 2) {
               setFuelConsumption({ current: results[results.length - 1], previous: results[results.length - 2] });
@@ -64,28 +72,59 @@ export default function VehicleDetail() {
     load();
   }, [id, location.key]);
 
-  // Kondisi Kendaraan calculation (Oli max 2000km, Service max 3000km)
+  // Kondisi Kendaraan: Service (1 bln / 2000km), Oli (3 bln / 2000km) — whichever comes first
   const condition = useMemo(() => {
     const currentOdo = vehicle?.currentOdometer || 0;
-    let lastOliOdo = 0, lastServiceOdo = 0;
-    // Check services + their items for "Oli Mesin" and "Service"
-    for (const svc of services) {
-      // Check workshop name or item names
-      const name = (svc.workshopName || '').toLowerCase();
-      if (!lastOliOdo && (name.includes('oli') || name.includes('mesin'))) lastOliOdo = svc.odometerAtService;
-      if (!lastServiceOdo && (name.includes('servis') || name.includes('service'))) lastServiceOdo = svc.odometerAtService;
+    const now = new Date();
+
+    let lastOliOdo = 0, lastOliDate = null;
+    let lastServiceOdo = 0, lastServiceDate = null;
+
+    // Sort services by date DESC so we find the most recent first
+    const sortedSvcs = [...services].sort((a, b) => new Date(b.serviceDate) - new Date(a.serviceDate));
+
+    for (const svc of sortedSvcs) {
+      const items = serviceItemsMap[svc.id] || [];
+      const hasOli = items.some(it => it.itemName === 'Oli Mesin');
+      const isService = items.some(it => it.itemName === 'Service');
+
+      if (!lastOliOdo && hasOli) {
+        lastOliOdo = svc.odometerAtService;
+        lastOliDate = svc.serviceDate;
+      }
+      if (!lastServiceOdo && isService) {
+        lastServiceOdo = svc.odometerAtService;
+        lastServiceDate = svc.serviceDate;
+      }
     }
-    // Also check if service records themselves have category info (from items)
-    if (!lastOliOdo || !lastServiceOdo) {
-      // Could also check via service items, but simplified for now
-    }
-    const oliPct = lastOliOdo ? Math.min(100, Math.max(0, ((currentOdo - lastOliOdo) / 2000) * 100)) : 0;
-    const svcPct = lastServiceOdo ? Math.min(100, Math.max(0, ((currentOdo - lastServiceOdo) / 3000) * 100)) : 0;
+
+    // Oli: max 2000km or 3 months (90 days)
+    const oliKmPct = lastOliOdo ? Math.min(100, ((currentOdo - lastOliOdo) / 2000) * 100) : 0;
+    const oliDaysSince = lastOliDate ? Math.max(0, (now - new Date(lastOliDate)) / (1000 * 60 * 60 * 24)) : 0;
+    const oliTimePct = Math.min(100, (oliDaysSince / 90) * 100);
+    const oliPct = Math.max(oliKmPct, oliTimePct);
+
+    // Service: max 2000km or 1 month (30 days)
+    const svcKmPct = lastServiceOdo ? Math.min(100, ((currentOdo - lastServiceOdo) / 2000) * 100) : 0;
+    const svcDaysSince = lastServiceDate ? Math.max(0, (now - new Date(lastServiceDate)) / (1000 * 60 * 60 * 24)) : 0;
+    const svcTimePct = Math.min(100, (svcDaysSince / 30) * 100);
+    const svcPct = Math.max(svcKmPct, svcTimePct);
+
     return {
-      oli: { percent: oliPct, sinceKm: lastOliOdo ? currentOdo - lastOliOdo : 0 },
-      service: { percent: svcPct, sinceKm: lastServiceOdo ? currentOdo - lastServiceOdo : 0 },
+      oli: {
+        percent: oliPct,
+        sinceKm: lastOliOdo ? currentOdo - lastOliOdo : 0,
+        sinceDays: Math.round(oliDaysSince),
+        byTime: oliTimePct > oliKmPct,
+      },
+      service: {
+        percent: svcPct,
+        sinceKm: lastServiceOdo ? currentOdo - lastServiceOdo : 0,
+        sinceDays: Math.round(svcDaysSince),
+        byTime: svcTimePct > svcKmPct,
+      },
     };
-  }, [vehicle, services]);
+  }, [vehicle, services, serviceItemsMap]);
 
   const getCondColor = (pct) => pct >= 90 ? '#ef4444' : pct >= 60 ? '#f59e0b' : '#22c55e';
   const getCondLabel = (pct) => pct >= 90 ? 'Ganti' : pct >= 60 ? 'Segera' : 'Aman';
@@ -269,25 +308,25 @@ export default function VehicleDetail() {
             <div className="flex justify-between text-sm mb-1">
               <span className="text-on-surface-variant">🛢️ Oli Mesin</span>
               <span style={{ color: getCondColor(condition.oli.percent) }} className="font-semibold text-xs">
-                {getCondLabel(condition.oli.percent)} · {condition.oli.sinceKm} km
+                {getCondLabel(condition.oli.percent)} · {condition.oli.sinceKm > 0 ? `${condition.oli.sinceKm} km` : ''}{condition.oli.sinceDays > 0 ? ` · ${condition.oli.sinceDays}h` : ''}
               </span>
             </div>
             <div className="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${condition.oli.percent}%`, backgroundColor: getCondColor(condition.oli.percent) }}></div>
             </div>
-            <p className="text-on-surface-variant/40 text-[10px] mt-1">Maks 2.000 km</p>
+            <p className="text-on-surface-variant/40 text-[10px] mt-1">{condition.oli.byTime ? 'Batas 3 bulan' : 'Maks 2.000 km'}</p>
           </div>
           <div>
             <div className="flex justify-between text-sm mb-1">
               <span className="text-on-surface-variant">⚙️ Service Berkala</span>
               <span style={{ color: getCondColor(condition.service.percent) }} className="font-semibold text-xs">
-                {getCondLabel(condition.service.percent)} · {condition.service.sinceKm} km
+                {getCondLabel(condition.service.percent)} · {condition.service.sinceKm > 0 ? `${condition.service.sinceKm} km` : ''}{condition.service.sinceDays > 0 ? ` · ${condition.service.sinceDays}h` : ''}
               </span>
             </div>
             <div className="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${condition.service.percent}%`, backgroundColor: getCondColor(condition.service.percent) }}></div>
             </div>
-            <p className="text-on-surface-variant/40 text-[10px] mt-1">Maks 3.000 km</p>
+            <p className="text-on-surface-variant/40 text-[10px] mt-1">{condition.service.byTime ? 'Batas 1 bulan' : 'Maks 2.000 km'}</p>
           </div>
         </div>
       </main>

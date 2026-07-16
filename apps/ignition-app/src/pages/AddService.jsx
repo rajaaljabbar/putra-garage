@@ -56,7 +56,6 @@ export default function AddService() {
 
   const toggleGroomingItem = (name) => {
     if (name === 'Lainnya') {
-      // Toggle custom input
       if (items.some(i => i.itemName === 'Lainnya')) {
         setItems(items.filter(i => i.itemName !== 'Lainnya'));
         setCustomLainnya({ name: '', cost: '' });
@@ -66,7 +65,7 @@ export default function AddService() {
       return;
     }
     const exists = items.find(i => i.itemName === name);
-    setItems(exists ? items.filter(i => i.itemName !== name) : [...items.filter(i => i.itemName), { itemName: name, cost: '' }]);
+    setItems(exists ? items.filter(i => i.itemName !== name) : [...items, { itemName: name, cost: '' }]);
   };
 
   const addCustomLainnya = () => {
@@ -77,7 +76,7 @@ export default function AddService() {
 
   const toggleServisItem = (name) => {
     const exists = items.find(i => i.itemName === name);
-    setItems(exists ? items.filter(i => i.itemName !== name) : [...items.filter(i => i.itemName), { itemName: name, cost: '' }]);
+    setItems(exists ? items.filter(i => i.itemName !== name) : [...items, { itemName: name, cost: '' }]);
   };
 
   const addCustomServisLainnya = () => {
@@ -119,13 +118,13 @@ export default function AddService() {
         ];
       } else if (category === 'Servis') {
         if (!odometer) { setIsProcessing(false); return setErrorMsg("Mohon isi odometer"); }
-        const valid = items.filter(i => i.itemName && i.cost);
+        const valid = items.filter(i => i.itemName);
         record = { odometerAtService: odometer, workshopName, totalCost: grandTotal, receiptImageUrl: receiptUrl || null, serviceDate };
-        serviceItems = valid.map(i => ({ ...i, category: 'Servis' }));
+        serviceItems = valid.map(i => ({ ...i, cost: i.cost || '0', category: 'Servis' }));
       } else {
-        const valid = items.filter(i => i.itemName && i.cost);
+        const valid = items.filter(i => i.itemName);
         record = { odometerAtService: '0', workshopName, totalCost: grandTotal, receiptImageUrl: receiptUrl || null, serviceDate };
-        serviceItems = valid.map(i => ({ ...i, category: 'Grooming' }));
+        serviceItems = valid.map(i => ({ ...i, cost: i.cost || '0', category: 'Grooming' }));
       }
       const res = await fetchApi(`/services/vehicle/${vehicleId}`, { method: 'POST', body: JSON.stringify({ record, items: serviceItems }) });
       if (res.success) navigate(`/history?vehicleId=${vehicleId}`);
@@ -263,9 +262,12 @@ export default function AddService() {
               </div>
             )}
             <ul className="flex flex-col gap-3">
-              {items.map((item, idx) => (
+              {items.map((item, idx) => {
+                const isPreset = (category === 'Servis' && SERVIS_ITEMS.includes(item.itemName)) || 
+                                 (category === 'Grooming' && GROOMING_ITEMS.includes(item.itemName));
+                return (
                 <li key={idx} className="flex items-center gap-1 bg-surface-container-low/50 border border-white/5 rounded-lg p-2">
-                  <input placeholder="Nama Item" className="text-on-surface flex-1 min-w-0 bg-transparent border-b border-white/20 px-1 py-1 text-sm focus:outline-none focus:border-primary" value={item.itemName} onChange={e => {
+                  <input placeholder="Nama Item" className={`text-on-surface flex-1 min-w-0 bg-transparent border-b border-white/20 px-1 py-1 text-sm focus:outline-none focus:border-primary ${isPreset ? 'text-primary font-medium' : ''}`} value={item.itemName} readOnly={isPreset} onChange={e => {
                     const n = [...items]; n[idx].itemName = e.target.value; setItems(n);
                   }} />
                   <input placeholder="Biaya" type="number" className="w-20 bg-transparent border-b border-white/20 px-1 py-1 text-on-surface-variant focus:outline-none focus:border-primary text-right text-sm" value={item.cost} onChange={e => {
@@ -273,7 +275,8 @@ export default function AddService() {
                   }} />
                   <button onClick={() => setItems(items.filter((_, i) => i !== idx))} className="text-error opacity-60 hover:opacity-100 flex-shrink-0"><span className="material-symbols-outlined text-sm">delete</span></button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
             {category === 'Servis' && (
               <button onClick={() => setItems([...items, { itemName: '', cost: '' }])} className="mt-2 w-full border border-dashed border-white/20 rounded-lg py-3 flex items-center justify-center gap-2 text-primary hover:bg-primary-container/10 transition-all">
